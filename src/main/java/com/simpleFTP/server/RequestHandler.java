@@ -19,9 +19,9 @@ public class RequestHandler extends Thread{
         System.out.println("Received a connection.");
         try {
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            while(socket.isConnected())
+            String line;
+            while((line = in.readLine()) != null)
             {
-                String line = in.readLine();
                 System.out.println("Server: " + line);
             }
             System.out.println("Connection closed.");

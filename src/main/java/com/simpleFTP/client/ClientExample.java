@@ -23,12 +23,17 @@ public class ClientExample {
         try {
             socket = new Socket(server, port);
             PrintStream out  = new PrintStream(socket.getOutputStream());
-            while(socket.isConnected())
+            boolean flag = true;
+            while(flag)
             {
                 Scanner scanner = new Scanner(System.in);
-                System.out.print("Client: ");
-                String line = scanner.nextLine();
-                out.println(line);
+                System.out.print("Username: ");
+                String username = scanner.nextLine();
+                System.out.println("Password: ");
+                String password = scanner.nextLine();
+                out.println(username);
+                out.println(password);
+                flag = false;
             }
             System.out.println("Connection closed.");
         } catch (IOException e) {
