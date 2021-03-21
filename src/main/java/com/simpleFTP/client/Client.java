@@ -12,7 +12,7 @@ public class ClientExample {
     private int port;
     private Socket socket;
 
-    public ClientExample(String server, int port)
+    public Client(String server, int port)
     {
         this.server = server;
         this.port = port;
