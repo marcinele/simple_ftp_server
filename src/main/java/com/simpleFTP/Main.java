@@ -1,16 +1,20 @@
 package com.simpleFTP;
 
-import com.simpleFTP.client.ClientExample;
-import com.simpleFTP.db.DatabaseDriver;
-import com.simpleFTP.server.ServerExample;
+import com.simpleFTP.client.Client;
+import com.simpleFTP.server.Server;
 
 public class Main {
 
     public static void main(String[] args) {
-        ServerExample serverExample = new ServerExample(10101);
-        ClientExample clientExample = new ClientExample("localhost", 10101);
 
-        serverExample.startServer();
-        clientExample.Connect();
+        if(args[0].equals("server"))
+        {
+            Server server = new Server(10101);
+            server.startServer();
+        }
+        else if(args[0].equals("client")){
+            Client client = new Client("localhost", 10101);
+            client.connect();
+        }
     }
 }

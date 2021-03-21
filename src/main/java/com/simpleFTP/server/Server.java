@@ -4,12 +4,12 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-public class ServerExample extends Thread{
+public class Server extends Thread{
     private ServerSocket serverSocket;
     private int port;
     private boolean running = false;
 
-    public ServerExample(int port)
+    public Server(int port)
     {
         this.port = port;
     }
