@@ -15,6 +15,11 @@ public class Main {
         else if(args[0].equals("client")){
             Client client = new Client("localhost", 10101);
             client.connect();
+            try{
+                client.login();
+            } catch (Exception e){
+                e.printStackTrace();
+            }
         }
     }
 }

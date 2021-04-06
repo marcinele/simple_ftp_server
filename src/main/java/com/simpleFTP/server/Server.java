@@ -36,8 +36,8 @@ public class Server extends Thread{
             System.out.println("Listening for a connection...");
             try {
                 Socket socket = this.serverSocket.accept();
-                RequestHandler requestHandler = new RequestHandler(socket);
-                requestHandler.start();
+                FtpServerIP ftpServerIP = new FtpServerIP(socket);
+                ftpServerIP.start();
             } catch (IOException e) {
                 e.printStackTrace();
                 System.out.println("Unable to accept a connection.");
