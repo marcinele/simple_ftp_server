@@ -23,6 +23,7 @@ public class Server extends Thread{
         }
         catch(Exception e)
         {
+            e.printStackTrace();
             System.out.println("Unable to start server.");
         }
     }
@@ -36,8 +37,8 @@ public class Server extends Thread{
             System.out.println("Listening for a connection...");
             try {
                 Socket socket = this.serverSocket.accept();
-                FtpServerIP ftpServerIP = new FtpServerIP(socket);
-                ftpServerIP.start();
+                FtpServerPI ftpServerPI = new FtpServerPI(socket);
+                ftpServerPI.start();
             } catch (IOException e) {
                 e.printStackTrace();
                 System.out.println("Unable to accept a connection.");
