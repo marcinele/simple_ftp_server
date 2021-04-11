@@ -1,6 +1,6 @@
 package com.simpleFTP;
 
-import com.simpleFTP.client.Client;
+import com.simpleFTP.client.ClientPI;
 import com.simpleFTP.server.Server;
 
 public class Main {
@@ -13,8 +13,16 @@ public class Main {
             server.startServer();
         }
         else if(args[0].equals("client")){
-            Client client = new Client("localhost", 10101);
-            client.connect();
+            ClientPI clientPI = new ClientPI("localhost", 10101);
+            clientPI.connect();
+            try{
+                clientPI.login();
+                clientPI.cwd("./lol");
+                //clientPI.port("127.0.0.1",12345);
+                clientPI.quit();
+            } catch (Exception e){
+                e.printStackTrace();
+            }
         }
     }
 }
