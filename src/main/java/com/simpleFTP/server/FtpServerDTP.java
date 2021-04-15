@@ -1,3 +1,12 @@
+// DTP
+// The data transfer process establishes and manages the data connection.
+// The DTP can be passive or active.
+
+// server-DTP
+// The data transfer process, in its normal "active" state, establishes the data connection with the "listening" data port.
+// It sets up parameters for transfer and storage, and transfers data on command from its PI.  The DTP can be placed in a
+// "passive" state to listen for rather than initiate a connection on the data port.
+
 package com.simpleFTP.server;
 
 import java.io.BufferedReader;
