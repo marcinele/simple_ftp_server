@@ -62,7 +62,7 @@ public class FtpServerPI extends Thread{
     {
         System.out.println("**** Received a connection. ****");
         Response(220);
-        System.out.println(cwd);
+        System.out.println(cwd_prefix);
         try {
             while(isRunning){
                 String input = in.readLine();
@@ -121,7 +121,7 @@ public class FtpServerPI extends Thread{
             } else{
                 user.setPassword(cmd.split(" ")[1]);
                 AuthorizationHandler authorizationHandler = new AuthorizationHandler();
-                if(authorizationHandler.checkCredentials(user)){
+                if(authorizationHandler.checkCredentials(user, cwd_prefix)){
                     user.setLoggedIn(true);
                     Response(230);
                 } else{
