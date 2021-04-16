@@ -9,6 +9,9 @@
 package com.simpleFTP.server;
 
 import java.io.*;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.Buffer;
 import java.nio.charset.StandardCharsets;
@@ -41,13 +44,17 @@ public class FtpServerPI extends Thread {
         isRunning = true;
         type = 0;
         replyCodes = new HashMap<>();
+        replyCodes.put(125, "125 Data connection already open; transfer starting.");
         replyCodes.put(200, "200 Command okay.");
         replyCodes.put(220, "220 Service ready for new user.");
         replyCodes.put(221, "221 Service closing control connection.");
+        replyCodes.put(227, "227 Entering Passive Mode.");
         replyCodes.put(230, "230 User logged in, proceed.");
         replyCodes.put(250, "250 Requested file action okay, completed.");
+        replyCodes.put(257,"257 " + cwd);
         replyCodes.put(331, "331 User name okay, need password.");
         replyCodes.put(421, "421 Service not available, closing control connection.");
+        replyCodes.put(451, "451 Requested action aborted: local error in processing.");
         replyCodes.put(500, "500 Syntax error, command unrecognized.");
         replyCodes.put(501, "501 Syntax error in parameters or arguments.");
         replyCodes.put(503, "503 Bad sequence of commands.");
@@ -88,10 +95,12 @@ public class FtpServerPI extends Thread {
                     case "PORT" -> port(input);
                     case "QUIT" -> quit();
                     case "CDUP" -> cdup();
-                    case "LIST" -> list(input);
+                    //case "LIST" -> list(input);
                     case "STRU" -> stru(input);
                     case "MODE" -> mode(input);
                     case "PWD" -> pwd();
+                    case "PASV" -> pasv();
+                    case "STOR" -> stor(input);
                     default -> Response(500);
                 }
             }
@@ -135,7 +144,7 @@ public class FtpServerPI extends Thread {
             } else {
                 user.setPassword(cmd.split(" ")[1]);
                 AuthorizationHandler authorizationHandler = new AuthorizationHandler();
-                if (authorizationHandler.checkCredentials(user)) {
+                if (authorizationHandler.checkCredentials(user, cwd_prefix)) {
                     user.setLoggedIn(true);
                     Response(230);
                 } else {
@@ -170,9 +179,11 @@ public class FtpServerPI extends Thread {
             Response(501);
         } else if (args[1].equals("A")) {
             type = 0;
+            if(ftpServerDTP != null) ftpServerDTP.setType(0);
             Response(200);
         } else if (args[1].equals("I")) {
             type = 1;
+            if(ftpServerDTP != null) ftpServerDTP.setType(1);
             Response(200);
         } else {
             Response(501);
@@ -189,21 +200,23 @@ public class FtpServerPI extends Thread {
 
     private void port(String input) {
         String[] args = input.split(" ");
-        if (args.length != 7) {
+        args = args[1].split(",");
+        if (args.length != 6) {
             Response(501);
         } else {
-            int h1 = Integer.parseInt(args[1], 2);
-            int h2 = Integer.parseInt(args[2], 2);
-            int h3 = Integer.parseInt(args[3], 2);
-            int h4 = Integer.parseInt(args[4], 2);
-            int port = Integer.parseUnsignedInt(args[5] + args[6], 2);
-
-            String host = Integer.toString(h1) + '.' + Integer.toString(h2) + '.' + Integer.toString(h3) + '.' + Integer.toString(h4);
+            if(ftpServerDTP != null){
+                ftpServerDTP.Close();
+                ftpServerDTP = null;
+            }
+            int p1 = Integer.parseInt(args[4]);
+            int p2 = Integer.parseInt(args[5]);
+            p1 = p1<<8;
+            int port = p1 + p2;
+            String host = args[0] + '.' + args[1] + '.' + args[2] + '.' + args[3];
             System.out.println(port);
             try {
                 ftpServerDTP = new FtpServerDTP(host, port, type);
                 Response(200);
-                ftpServerDTP.start();
             } catch (IOException e) {
                 e.printStackTrace();
                 Response(421);
@@ -284,8 +297,8 @@ public class FtpServerPI extends Thread {
         if (cwd == null || cwd.length() == 0)
             Response(551);
         else {
-            out.print("257 " + cwd + " created." + EOL());
-            Response(200);
+            replyCodes.replace(257,"257 " + cwd);
+            Response(257);
         }
     }
 
@@ -303,5 +316,45 @@ public class FtpServerPI extends Thread {
         System.out.println(">>: " + req);
 
         return req;
+    }
+
+    private void pasv() throws IOException {
+        try{
+            int dtp_port;
+            int right_octet = 0;
+            int left_octet;
+            String dtp_address;
+            if(ftpServerDTP != null){
+                ftpServerDTP.Close();
+                ftpServerDTP = null;
+            }
+            dtp_address = socket.getInetAddress().toString().replace("/","");
+            dtp_port = socket.getPort()-1;
+            ServerSocket serverSocket = new ServerSocket();
+            serverSocket.bind(new InetSocketAddress(dtp_address, dtp_port));
+            dtp_address = dtp_address.replace(".", ",");
+            ftpServerDTP = new FtpServerDTP(serverSocket,type);
+
+            right_octet = dtp_port >> 8;
+            right_octet = right_octet << 8;
+            left_octet = dtp_port-right_octet;
+            right_octet = right_octet >> 8;
+            replyCodes.replace(227, "227 Entering passive mode ("+ dtp_address + "," + Integer.toString(right_octet) + "," + Integer.toString(left_octet) + ")");
+            Response(227);
+        } catch (Exception e){
+            e.printStackTrace();
+            Response(421);
+            CloseControlConnection();
+        }
+    }
+
+    private void stor(String input) throws IOException {
+        String path = input.split(" ")[1];
+        if(ftpServerDTP != null){
+            Response(125);
+            Response(ftpServerDTP.stor(cwd+File.separator+path));
+        } else{
+            Response(421);
+        }
     }
 }
