@@ -9,6 +9,7 @@
 
 package com.simpleFTP.server;
 
+
 import com.google.common.io.ByteSink;
 import com.google.common.io.Files;
 
@@ -18,13 +19,22 @@ import java.io.*;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.file.*;
 import java.nio.file.attribute.FileOwnerAttributeView;
+import java.nio.file.attribute.PosixFileAttributes;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.io.*;
+import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.DosFileAttributes;
+import java.nio.file.attribute.PosixFileAttributes;
+
 
 public class FtpServerDTP extends Thread {
     private int port;
@@ -34,6 +44,7 @@ public class FtpServerDTP extends Thread {
     private BufferedReader in;
     private PrintStream out;
     private DataOutputStream outToClient;
+    private LinuxDataHandler linuxDataHandler;
     private int type;
 
 
@@ -144,11 +155,11 @@ public class FtpServerDTP extends Thread {
                 String[] os = System.getProperty("os.name").split(" ");
                 File file = new File(String.valueOf(filePath));
                 StringBuilder filePermissions = new StringBuilder();
+                if (file.isDirectory())
+                    filePermissions.append('d');
+                else
+                    filePermissions.append('-');
                 if (os[0].equals("Windows")) {
-                    if (file.isDirectory())
-                        filePermissions.append('d');
-                    else
-                        filePermissions.append('-');
                     if (file.canRead())
                         filePermissions.append('r');
                     else
@@ -164,7 +175,9 @@ public class FtpServerDTP extends Thread {
                     filePermissions.append("------ 1");
                 } else {
                     // TODO - LINUX PERMISSIONS
-                    filePermissions.append('-');
+                    LinuxDataHandler linuxDataHandler = new LinuxDataHandler(filePath);
+
+                    filePermissions.append(linuxDataHandler.usingJava7Metadata());
                 }
 
                 // Actual file size
@@ -197,4 +210,5 @@ public class FtpServerDTP extends Thread {
     public void setType(int type) {
         this.type = type;
     }
+
 }
