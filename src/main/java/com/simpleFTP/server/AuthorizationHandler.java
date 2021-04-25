@@ -16,8 +16,8 @@ public class AuthorizationHandler{
 
     }
 
-    public boolean checkCredentials(User user) throws FileNotFoundException {
-        File file = new File("./users.txt");
+    public boolean checkCredentials(User user, String path) throws FileNotFoundException {
+        File file = new File(path + File.separator + "users.txt");
         Scanner reader = new Scanner(file);
         while(reader.hasNextLine()){
             String line  = reader.nextLine();
