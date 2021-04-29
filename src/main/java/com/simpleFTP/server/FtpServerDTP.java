@@ -9,26 +9,46 @@
 
 package com.simpleFTP.server;
 
+
 import com.google.common.io.ByteSink;
 import com.google.common.io.Files;
 
 
+import java.awt.*;
 import java.io.*;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.attribute.FileOwnerAttributeView;
+import java.nio.file.attribute.PosixFileAttributes;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.io.*;
+import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.DosFileAttributes;
+import java.nio.file.attribute.PosixFileAttributes;
 
-public class FtpServerDTP extends Thread{
+
+public class FtpServerDTP extends Thread {
     private int port;
     private String address;
     private Socket socket;
     private ServerSocket serverSocket;
     private BufferedReader in;
     private PrintStream out;
+    private DataOutputStream outToClient;
+    private LinuxDataHandler linuxDataHandler;
     private int type;
 
 
-    public FtpServerDTP(ServerSocket serverSocket, int type){
+    public FtpServerDTP(ServerSocket serverSocket, int type) {
         this.serverSocket = serverSocket;
         this.type = type;
         this.start();
@@ -41,16 +61,18 @@ public class FtpServerDTP extends Thread{
         ConfigureStreams();
     }
 
-    private void ConfigureStreams(){
+    private void ConfigureStreams() {
         try {
             this.in = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
             this.out = new PrintStream(this.socket.getOutputStream());
+            this.outToClient = new DataOutputStream(this.socket.getOutputStream());
+
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public void run(){
+    public void run() {
         try {
             socket = serverSocket.accept();
             ConfigureStreams();
@@ -60,11 +82,11 @@ public class FtpServerDTP extends Thread{
         }
     }
 
-    public void SendData(String data){
+    public void SendData(String data) {
         out.print(data + EOL());
     }
 
-    private String EOL(){
+    private String EOL() {
         return switch (type) {
             case 0 -> "\r\n";
             case 1 -> "\n";
@@ -72,20 +94,20 @@ public class FtpServerDTP extends Thread{
         };
     }
 
-    public InetAddress getInetAddress(){
+    public InetAddress getInetAddress() {
         return serverSocket.getInetAddress();
     }
 
-    public int getPort(){
+    public int getPort() {
         return serverSocket.getLocalPort();
     }
 
-    public ServerSocket getServerSocket(){
+    public ServerSocket getServerSocket() {
         return serverSocket;
     }
 
-    public void Close(){
-        try{
+    public void Close() {
+        try {
             serverSocket.close();
             socket.close();
             serverSocket = null;
@@ -97,21 +119,21 @@ public class FtpServerDTP extends Thread{
     public int stor(String path) throws IOException {
         File file = new File(path);
         FileWriter fileWriter;
-        if(file.exists()){
+        if (file.exists()) {
             fileWriter = new FileWriter(file.getAbsolutePath());
-        } else{
-            if(!file.createNewFile()){
+        } else {
+            if (!file.createNewFile()) {
                 return 451;
             }
             fileWriter = new FileWriter(file.getAbsolutePath());
         }
-        if(type == 0){
+        if (type == 0) {
             String input = "";
-            while( (input = in.readLine()) != null){
-                fileWriter.write(input+EOL());
+            while ((input = in.readLine()) != null) {
+                fileWriter.write(input + EOL());
             }
             fileWriter.close();
-        } else{
+        } else {
             InputStream inputStream = socket.getInputStream();
             ByteSink byteSink = Files.asByteSink(file);
             byteSink.writeFrom(inputStream);
@@ -120,8 +142,73 @@ public class FtpServerDTP extends Thread{
         return 250;
     }
 
+    public int list(String dirPath) throws IOException {
+        PrintWriter dataSocketOut = new PrintWriter(new PrintWriter(socket.getOutputStream()), true);
+        Path path = Paths.get(dirPath);
+        StringBuilder filesData = new StringBuilder();
+        try (DirectoryStream<Path> stream = java.nio.file.Files.newDirectoryStream(path)) {
+            for (Path filePath : stream) {
+                // Actual file name
+                String fileName = filePath.getFileName().toString();
+
+                // Actual file permissions
+                String[] os = System.getProperty("os.name").split(" ");
+                File file = new File(String.valueOf(filePath));
+                StringBuilder filePermissions = new StringBuilder();
+                if (file.isDirectory())
+                    filePermissions.append('d');
+                else
+                    filePermissions.append('-');
+                if (os[0].equals("Windows")) {
+                    if (file.canRead())
+                        filePermissions.append('r');
+                    else
+                        filePermissions.append('-');
+                    if (file.canWrite())
+                        filePermissions.append('w');
+                    else
+                        filePermissions.append('-');
+                    if (file.canExecute())
+                        filePermissions.append('x');
+                    else
+                        filePermissions.append('-');
+                    filePermissions.append("------ 1");
+                } else {
+                    // TODO - LINUX PERMISSIONS
+                    LinuxDataHandler linuxDataHandler = new LinuxDataHandler(filePath);
+
+                    filePermissions.append(linuxDataHandler.usingJava7Metadata());
+                }
+
+                // Actual file size
+                long fileSizeNum = file.length();
+                String fileSize = Long.toString(fileSizeNum);
+                int spacing = 10 - fileSize.length();
+                for (int i = 0; i < spacing; i++)
+                    fileSize = " " + fileSize;
+
+                // Actual file last modified date
+                SimpleDateFormat formatter = new SimpleDateFormat("MMM dd HH:mm");
+                String fileModifiedDate = formatter.format(file.lastModified());
+
+                // Actual file owner
+                String owner = java.nio.file.Files.getOwner(Path.of(file.getPath())).toString();
+
+
+                String actualFileData = filePermissions + " " + owner + " " + fileSize + " " + fileModifiedDate + " " + fileName;
+                System.out.println(actualFileData);
+                filesData.append(actualFileData).append("\n");
+            }
+            System.out.println("---ZAKONCZONO---");
+            System.out.println(filesData);
+            dataSocketOut.println(filesData.toString());
+        }
+        socket.close();
+        return 200;
+    }
+
     public void setType(int type) {
         this.type = type;
     }
-}
 
+}

@@ -51,7 +51,7 @@ public class FtpServerPI extends Thread {
         replyCodes.put(227, "227 Entering Passive Mode.");
         replyCodes.put(230, "230 User logged in, proceed.");
         replyCodes.put(250, "250 Requested file action okay, completed.");
-        replyCodes.put(257,"257 " + cwd);
+        replyCodes.put(257, "257 " + cwd);
         replyCodes.put(331, "331 User name okay, need password.");
         replyCodes.put(421, "421 Service not available, closing control connection.");
         replyCodes.put(451, "451 Requested action aborted: local error in processing.");
@@ -95,10 +95,12 @@ public class FtpServerPI extends Thread {
                     case "PORT" -> port(input);
                     case "QUIT" -> quit();
                     case "CDUP" -> cdup();
-                    //case "LIST" -> list(input);
+                    case "LIST" -> list();
                     case "STRU" -> stru(input);
                     case "MODE" -> mode(input);
                     case "PWD" -> pwd();
+                    case "NOOP" -> noop();
+                    case "RETR" -> retr(input);
                     case "PASV" -> pasv();
                     case "STOR" -> stor(input);
                     default -> Response(500);
@@ -111,6 +113,8 @@ public class FtpServerPI extends Thread {
         } catch (IOException e) {
             e.printStackTrace();
             System.out.println("**** Unable to handle connection. ****");
+        } catch (Exception e) {
+            e.printStackTrace();
         }
 
     }
@@ -179,11 +183,11 @@ public class FtpServerPI extends Thread {
             Response(501);
         } else if (args[1].equals("A")) {
             type = 0;
-            if(ftpServerDTP != null) ftpServerDTP.setType(0);
+            if (ftpServerDTP != null) ftpServerDTP.setType(0);
             Response(200);
         } else if (args[1].equals("I")) {
             type = 1;
-            if(ftpServerDTP != null) ftpServerDTP.setType(1);
+            if (ftpServerDTP != null) ftpServerDTP.setType(1);
             Response(200);
         } else {
             Response(501);
@@ -204,13 +208,13 @@ public class FtpServerPI extends Thread {
         if (args.length != 6) {
             Response(501);
         } else {
-            if(ftpServerDTP != null){
+            if (ftpServerDTP != null) {
                 ftpServerDTP.Close();
                 ftpServerDTP = null;
             }
             int p1 = Integer.parseInt(args[4]);
             int p2 = Integer.parseInt(args[5]);
-            p1 = p1<<8;
+            p1 = p1 << 8;
             int port = p1 + p2;
             String host = args[0] + '.' + args[1] + '.' + args[2] + '.' + args[3];
             System.out.println(port);
@@ -241,11 +245,6 @@ public class FtpServerPI extends Thread {
         }
     }
 
-    private void list(String input) {
-        // send a list from the server to the passive DTP
-        // args -> [<SP> <pathname>] <CRLF>
-    }
-
     private void stru(String input) {
         // specyfing file structure
         // F - File (default), R - Record, P - Page
@@ -261,11 +260,9 @@ public class FtpServerPI extends Thread {
                 default -> stru = "F";
             }
             Response(200);
-        }
-        else if (!Arrays.asList(pos).contains(args[1])) {
+        } else if (!Arrays.asList(pos).contains(args[1])) {
             Response(501);
-        }
-        else
+        } else
             Response(500);
     }
 
@@ -284,11 +281,9 @@ public class FtpServerPI extends Thread {
                 default -> stru = "S";
             }
             Response(200);
-        }
-        else if (!Arrays.asList(pos).contains(args[1])) {
+        } else if (!Arrays.asList(pos).contains(args[1])) {
             Response(501);
-        }
-        else
+        } else
             Response(500);
     }
 
@@ -297,9 +292,17 @@ public class FtpServerPI extends Thread {
         if (cwd == null || cwd.length() == 0)
             Response(551);
         else {
-            replyCodes.replace(257,"257 " + cwd);
+            replyCodes.replace(257, "257 " + cwd);
             Response(257);
         }
+    }
+
+    private void noop() {
+        // sending OK
+        if (ftpServerDTP != null)
+            Response(200);
+        else
+            Response(421);
     }
 
     private void Response(int code) {
@@ -319,29 +322,29 @@ public class FtpServerPI extends Thread {
     }
 
     private void pasv() throws IOException {
-        try{
+        try {
             int dtp_port;
             int right_octet = 0;
             int left_octet;
             String dtp_address;
-            if(ftpServerDTP != null){
+            if (ftpServerDTP != null) {
                 ftpServerDTP.Close();
                 ftpServerDTP = null;
             }
-            dtp_address = socket.getInetAddress().toString().replace("/","");
-            dtp_port = socket.getPort()-1;
+            dtp_address = socket.getInetAddress().toString().replace("/", "");
+            dtp_port = socket.getPort() - 1;
             ServerSocket serverSocket = new ServerSocket();
             serverSocket.bind(new InetSocketAddress(dtp_address, dtp_port));
             dtp_address = dtp_address.replace(".", ",");
-            ftpServerDTP = new FtpServerDTP(serverSocket,type);
+            ftpServerDTP = new FtpServerDTP(serverSocket, type);
 
             right_octet = dtp_port >> 8;
             right_octet = right_octet << 8;
-            left_octet = dtp_port-right_octet;
+            left_octet = dtp_port - right_octet;
             right_octet = right_octet >> 8;
-            replyCodes.replace(227, "227 Entering passive mode ("+ dtp_address + "," + Integer.toString(right_octet) + "," + Integer.toString(left_octet) + ")");
+            replyCodes.replace(227, "227 Entering passive mode (" + dtp_address + "," + Integer.toString(right_octet) + "," + Integer.toString(left_octet) + ")");
             Response(227);
-        } catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
             Response(421);
             CloseControlConnection();
@@ -350,11 +353,32 @@ public class FtpServerPI extends Thread {
 
     private void stor(String input) throws IOException {
         String path = input.split(" ")[1];
-        if(ftpServerDTP != null){
+        if (ftpServerDTP != null) {
             Response(125);
-            Response(ftpServerDTP.stor(cwd+File.separator+path));
-        } else{
+            Response(ftpServerDTP.stor(cwd + File.separator + path));
+        } else {
             Response(421);
         }
     }
-}
+
+    private void list() throws Exception {
+        // send a list from the server to the passive DTP
+        // args -> [<SP> <pathname>] <CRLF>
+        if (ftpServerDTP != null) {
+            Response(125);
+            Response(ftpServerDTP.list(cwd + File.separator));
+        } else {
+            Response(421);
+        }
+    }
+
+    private void retr(String input) {
+        // Transfer a copy of the file, specified in the pathname
+        String[] args = input.split(" ");
+        if (args.length < 2)
+            Response(501);
+        else {
+            // To do
+            }
+        }
+    }
