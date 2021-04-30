@@ -8,6 +8,8 @@
 
 package com.simpleFTP.server;
 
+import com.simpleFTP.security.PathValidator;
+
 import java.io.*;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -63,9 +65,9 @@ public class FtpServerPI extends Thread {
 
 
         cwd_prefix = System.getProperty("user.dir");
-        cwd = cwd_prefix + File.separator + "ftp";
-        System.out.println(cwd);
-        cwd_path = Paths.get(cwd);
+        cwd = File.separator + "ftp";
+        System.out.println(cwd_prefix+cwd);
+        cwd_path = Paths.get(cwd_prefix+cwd);
         if (!Files.exists(cwd_path)) {
             Files.createDirectories(cwd_path);
         }
@@ -103,6 +105,7 @@ public class FtpServerPI extends Thread {
                     case "RETR" -> retr(input);
                     case "PASV" -> pasv();
                     case "STOR" -> stor(input);
+                    case "MKD" -> mkd(input);
                     default -> Response(500);
                 }
             }
@@ -165,12 +168,8 @@ public class FtpServerPI extends Thread {
         String[] args = input.split(" ");
         if (args.length != 2) {
             Response(501);
-        } else if (args[1].startsWith(cwd_prefix) && Files.exists(Paths.get(args[1]))) {
-            cwd = args[1];
-            Response(250);
-        } else if (args[1].startsWith("./") && Files.exists(Paths.get(cwd + args[1].replaceFirst(".", "")))) {
-            String path = args[1].replaceFirst(".", "");
-            cwd = cwd + path;
+        } else if(PathValidator.CwdValidator(args[1]) != null){
+            cwd = PathValidator.CwdValidator(args[1]);
             Response(250);
         } else {
             Response(550);
@@ -238,10 +237,12 @@ public class FtpServerPI extends Thread {
         // change to parent directory
         if (cwd == null || cwd.length() == 0)
             Response(550);
-        else {
+        else if(PathValidator.CdupValidator(cwd)){
             cwd = cwd.substring(0, cwd.lastIndexOf(File.separator));
             out.print(cwd);
             Response(200);
+        } else{
+            Response(550);
         }
     }
 
@@ -353,11 +354,13 @@ public class FtpServerPI extends Thread {
 
     private void stor(String input) throws IOException {
         String path = input.split(" ")[1];
-        if (ftpServerDTP != null) {
-            Response(125);
-            Response(ftpServerDTP.stor(cwd + File.separator + path));
-        } else {
-            Response(421);
+        if( (path= PathValidator.GeneralValidator(path, cwd_prefix, cwd)) != null ){
+            if (ftpServerDTP != null) {
+                Response(125);
+                Response(ftpServerDTP.stor(cwd_prefix + File.separator + path));
+            } else {
+                Response(421);
+            }
         }
     }
 
@@ -366,7 +369,7 @@ public class FtpServerPI extends Thread {
         // args -> [<SP> <pathname>] <CRLF>
         if (ftpServerDTP != null) {
             Response(125);
-            Response(ftpServerDTP.list(cwd + File.separator));
+            Response(ftpServerDTP.list(cwd_prefix + cwd + File.separator));
         } else {
             Response(421);
         }
@@ -381,4 +384,23 @@ public class FtpServerPI extends Thread {
             // To do
             }
         }
+
+    private void mkd(String input){
+        String path = null;
+        try{
+            path = input.split(" ")[1];
+        }catch(Exception e){
+            Response(501);
+            return;
+        }
+        if( (path = PathValidator.GeneralValidator(path, cwd_prefix, cwd)) != null ){
+            File newDir = new File(path);
+            try {
+                newDir.mkdir();
+                Response(250); // sprawdzic czy na pewno ten kod
+            } catch (Exception e){
+                Response(451);
+            }
+        }
+    }
     }
