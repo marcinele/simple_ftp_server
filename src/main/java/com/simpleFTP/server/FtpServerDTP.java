@@ -210,7 +210,20 @@ public class FtpServerDTP extends Thread {
     }
 
     public int retr(String path) {
-        return 250; 
+        try {
+            File file = new File(path);
+            OutputStream outputStream = socket.getOutputStream();
+            if (file.exists()) {
+                byte[] bytes = readFileToByteArray(file);
+                outputStream.write(bytes);
+                socket.close();
+                return 250;
+            } else {
+                return 451;
+            }
+        } catch (Exception InvalidPathException) {
+            return 501;
+        }
     }
 
     public void setType(int type) {
