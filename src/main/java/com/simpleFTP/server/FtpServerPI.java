@@ -106,6 +106,8 @@ public class FtpServerPI extends Thread {
                     case "PASV" -> pasv();
                     case "STOR" -> stor(input);
                     case "MKD" -> mkd(input);
+                    case "DELE" -> dele(input);
+                    case "RMD" -> dele(input);
                     default -> Response(500);
                 }
             }
@@ -164,13 +166,18 @@ public class FtpServerPI extends Thread {
         }
     }
 
-    public void cwd(String input) {              // Change working directory
+    public void cwd(String input) {              // Change working directory /// Nie sprawdza czy ten folder w ogóle istnieje xD
         String[] args = input.split(" ");
         if (args.length != 2) {
             Response(501);
-        } else if(PathValidator.CwdValidator(args[1]) != null){
-            cwd = PathValidator.CwdValidator(args[1]);
-            Response(250);
+        } else if(PathValidator.CwdValidator(args[1], cwd) != null){
+            String candidate = PathValidator.CwdValidator(args[1], cwd);
+            if (new File(cwd_prefix + candidate).exists()){
+                cwd = PathValidator.CwdValidator(args[1], cwd);
+                Response(250);
+            } else {
+                Response(550);
+            }
         } else {
             Response(550);
         }
@@ -239,8 +246,7 @@ public class FtpServerPI extends Thread {
             Response(550);
         else if(PathValidator.CdupValidator(cwd)){
             cwd = cwd.substring(0, cwd.lastIndexOf(File.separator));
-            out.print(cwd);
-            Response(200);
+            Response(250);
         } else{
             Response(550);
         }
@@ -333,9 +339,10 @@ public class FtpServerPI extends Thread {
                 ftpServerDTP = null;
             }
             dtp_address = socket.getInetAddress().toString().replace("/", "");
-            dtp_port = socket.getPort() - 1;
+            dtp_port = 0; // Should allocate for us
             ServerSocket serverSocket = new ServerSocket();
             serverSocket.bind(new InetSocketAddress(dtp_address, dtp_port));
+            dtp_port = serverSocket.getLocalPort();
             dtp_address = dtp_address.replace(".", ",");
             ftpServerDTP = new FtpServerDTP(serverSocket, type);
 
@@ -345,6 +352,7 @@ public class FtpServerPI extends Thread {
             right_octet = right_octet >> 8;
             replyCodes.replace(227, "227 Entering passive mode (" + dtp_address + "," + Integer.toString(right_octet) + "," + Integer.toString(left_octet) + ")");
             Response(227);
+            ftpServerDTP.join();
         } catch (Exception e) {
             e.printStackTrace();
             Response(421);
@@ -357,7 +365,7 @@ public class FtpServerPI extends Thread {
         if( (path= PathValidator.GeneralValidator(path, cwd_prefix, cwd)) != null ){
             if (ftpServerDTP != null) {
                 Response(125);
-                Response(ftpServerDTP.stor(cwd_prefix + File.separator + path));
+                Response(ftpServerDTP.stor(path));
             } else {
                 Response(421);
             }
@@ -403,4 +411,21 @@ public class FtpServerPI extends Thread {
             }
         }
     }
+
+    private void dele(String input){
+        String[] input_splitted = input.split(" ");
+        if(input_splitted.length != 2 ){
+            Response(501);
+        } else {
+            String path = PathValidator.GeneralValidator(input_splitted[1], cwd_prefix, cwd);
+            if(path != null){
+                File toDelete = new File(path);
+                if(toDelete.delete()){
+                    Response(250);
+                } else {
+                    Response(550);
+                }
+            }
+        }
     }
+}

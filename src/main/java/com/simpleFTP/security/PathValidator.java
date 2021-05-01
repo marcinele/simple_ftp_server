@@ -22,15 +22,15 @@ public class PathValidator {
         return cwd_splitted.length > 1;
     }
 
-    public static String CwdValidator(String arg){
+    public static String CwdValidator(String arg, String cwd){
         if(arg.startsWith(File.separator + "ftp")){
             return arg;
         } else if(arg.startsWith(File.separator)){
             return null;
         } else if(arg.startsWith("." + File.separator)){
-            return arg.replaceFirst("."+File.separator, "");
+            return cwd + arg.replaceFirst(".", "");
         } else{
-            return arg;
+            return cwd + File.separator + arg;
         }
     }
 }

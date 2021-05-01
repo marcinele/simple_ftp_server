@@ -124,8 +124,9 @@ public class FtpServerDTP extends Thread {
         } else {
             if (!file.createNewFile()) {
                 return 451;
+            } else {
+                fileWriter = new FileWriter(file.getAbsolutePath());
             }
-            fileWriter = new FileWriter(file.getAbsolutePath());
         }
         if (type == 0) {
             String input = "";
