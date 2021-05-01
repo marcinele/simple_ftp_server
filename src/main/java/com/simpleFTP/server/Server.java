@@ -34,7 +34,7 @@ public class Server extends Thread{
         this.running = true;
         while(running)
         {
-            System.out.println("Listening for a connection...");
+            System.out.println("Listening for a connection on addres: " + serverSocket.getInetAddress().getHostAddress());
             try {
                 Socket socket = this.serverSocket.accept();
                 FtpServerPI ftpServerPI = new FtpServerPI(socket);
