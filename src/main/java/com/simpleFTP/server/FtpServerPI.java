@@ -450,10 +450,6 @@ public class FtpServerPI extends Thread {
         else {
             String fileName = input_splitted[1];
             String path;
-            System.out.println(cwd_prefix);
-            System.out.println(cwd);
-            System.out.println(fileName);
-            System.out.println(fileName.startsWith(cwd));
             if (fileName.indexOf('.') != -1)
                 if (!fileName.startsWith(cwd))
                     path = cwd_prefix + File.separator + cwd + File.separator + fileName;
@@ -461,15 +457,11 @@ public class FtpServerPI extends Thread {
                     path = cwd_prefix + File.separator + fileName;
             else
                 path = cwd_prefix + File.separator + fileName;
-            System.out.println(path);
             File renamedNewFile = new File(path);
             if (renamedOldFile == null) {
                 Response(501);
             } else {
-                System.out.println(renamedOldFile.getAbsolutePath());
                 boolean success = renamedOldFile.renameTo(renamedNewFile);
-                System.out.println(renamedOldFile.getAbsolutePath());
-                System.out.println(renamedNewFile.getAbsolutePath());
                 if (success) {
                     renamedOldFile = null;
                     Response(250);
