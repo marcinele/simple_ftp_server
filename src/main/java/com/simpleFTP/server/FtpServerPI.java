@@ -21,6 +21,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.SQLException;
+import java.sql.SQLOutput;
 import java.util.Arrays;
 import java.util.HashMap;
 
@@ -448,15 +449,10 @@ public class FtpServerPI extends Thread {
         if (input_splitted.length != 2)
             Response(501);
         else {
-            String fileName = input_splitted[1];
-            String path;
-            if (fileName.indexOf('.') != -1)
-                if (!fileName.startsWith(cwd))
-                    path = cwd_prefix + File.separator + cwd + File.separator + fileName;
-                else
-                    path = cwd_prefix + File.separator + fileName;
-            else
-                path = cwd_prefix + File.separator + fileName;
+            System.out.println(input_splitted[1]);
+            String path = PathValidator.GeneralValidator(input_splitted[1], cwd_prefix, cwd);
+            System.out.println(path);
+            assert path != null;
             File renamedNewFile = new File(path);
             if (renamedOldFile == null) {
                 Response(501);
