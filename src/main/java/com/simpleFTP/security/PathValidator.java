@@ -22,8 +22,8 @@ public class PathValidator {
         String[] os = System.getProperty("os.name").split(" ");
 
         if (os[0].equals("Windows")){
-            String seperator = File.separator + File.separator;
-            cwd_splitted = cwd.split(seperator);
+            String separator = File.separator + File.separator;
+            cwd_splitted = cwd.split(separator);
         }
         else {
             cwd_splitted = cwd.split(File.separator);

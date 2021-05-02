@@ -37,6 +37,7 @@ public class FtpServerPI extends Thread {
     private String stru;                // F - File, R - Record, P - Page
     private String mode;                // S - Stream, B - Block, C - Compressed
     private FtpServerDTP ftpServerDTP;
+    private File renamedOldFile = null;
     HashMap<Integer, String> replyCodes;
 
     public FtpServerPI(Socket socket) throws IOException {
@@ -88,7 +89,6 @@ public class FtpServerPI extends Thread {
                 }
                 System.out.println(">>: " + input);
                 String cmd = input.split(" ")[0];
-                String cmd1 = "CDUP";
                 switch (cmd) {
                     case "USER" -> login(input);
                     case "PASSWORD" -> Response(503);
@@ -106,8 +106,9 @@ public class FtpServerPI extends Thread {
                     case "PASV" -> pasv();
                     case "STOR" -> stor(input);
                     case "MKD" -> mkd(input);
-                    case "DELE" -> dele(input);
-                    case "RMD" -> dele(input);
+                    case "DELE", "RMD" -> dele(input);
+                    case "RNFR" -> rnfr(input);
+                    case "RNTO" -> rnto(input);
                     default -> Response(500);
                 }
             }
@@ -427,6 +428,53 @@ public class FtpServerPI extends Thread {
                 } else {
                     Response(550);
                 }
+            }
+        }
+    }
+    private void rnfr(String input) throws IOException {
+        String[] input_splitted = input.split(" ");
+        if (input_splitted.length != 2)
+            Response(501);
+        else {
+            String fileName = input_splitted[1];
+            String path = cwd_prefix + File.separator + cwd + File.separator + fileName;
+            renamedOldFile = new File(path);
+            Response(250);
+        }
+    }
+
+    private void rnto(String input) throws IOException {
+        String[] input_splitted = input.split(" ");
+        if (input_splitted.length != 2)
+            Response(501);
+        else {
+            String fileName = input_splitted[1];
+            String path;
+            System.out.println(cwd_prefix);
+            System.out.println(cwd);
+            System.out.println(fileName);
+            System.out.println(fileName.startsWith(cwd));
+            if (fileName.indexOf('.') != -1)
+                if (!fileName.startsWith(cwd))
+                    path = cwd_prefix + File.separator + cwd + File.separator + fileName;
+                else
+                    path = cwd_prefix + File.separator + fileName;
+            else
+                path = cwd_prefix + File.separator + fileName;
+            System.out.println(path);
+            File renamedNewFile = new File(path);
+            if (renamedOldFile == null) {
+                Response(501);
+            } else {
+                System.out.println(renamedOldFile.getAbsolutePath());
+                boolean success = renamedOldFile.renameTo(renamedNewFile);
+                System.out.println(renamedOldFile.getAbsolutePath());
+                System.out.println(renamedNewFile.getAbsolutePath());
+                if (success) {
+                    renamedOldFile = null;
+                    Response(250);
+                } else
+                    Response(550);
             }
         }
     }

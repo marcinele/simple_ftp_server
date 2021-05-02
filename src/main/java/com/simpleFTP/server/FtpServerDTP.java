@@ -47,7 +47,6 @@ public class FtpServerDTP extends Thread {
     private BufferedReader in;
     private PrintStream out;
     private DataOutputStream outToClient;
-    private LinuxDataHandler linuxDataHandler;
     private int type;
 
 
