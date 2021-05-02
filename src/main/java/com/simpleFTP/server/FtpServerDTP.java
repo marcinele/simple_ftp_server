@@ -13,6 +13,8 @@ package com.simpleFTP.server;
 import com.google.common.io.ByteSink;
 import com.google.common.io.Files;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import java.awt.*;
 import java.io.*;
@@ -34,6 +36,7 @@ import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.DosFileAttributes;
 import java.nio.file.attribute.PosixFileAttributes;
+import java.util.concurrent.TimeUnit;
 
 
 public class FtpServerDTP extends Thread {
@@ -44,7 +47,6 @@ public class FtpServerDTP extends Thread {
     private BufferedReader in;
     private PrintStream out;
     private DataOutputStream outToClient;
-    private LinuxDataHandler linuxDataHandler;
     private int type;
 
 
@@ -175,9 +177,7 @@ public class FtpServerDTP extends Thread {
                         filePermissions.append('-');
                     filePermissions.append("------ 1");
                 } else {
-                    // TODO - LINUX PERMISSIONS
                     LinuxDataHandler linuxDataHandler = new LinuxDataHandler(filePath);
-
                     filePermissions.append(linuxDataHandler.usingJava7Metadata());
                 }
 
@@ -208,8 +208,37 @@ public class FtpServerDTP extends Thread {
         return 200;
     }
 
+    public int retr(String path) {
+        try {
+            File file = new File(path);
+            OutputStream outputStream = socket.getOutputStream();
+            if (file.exists()) {
+                byte[] bytes = readFileToByteArray(file);
+                outputStream.write(bytes);
+                socket.close();
+                return 250;
+            } else {
+                return 451;
+            }
+        } catch (Exception InvalidPathException) {
+            return 501;
+        }
+    }
+
     public void setType(int type) {
         this.type = type;
     }
 
+    private static byte[] readFileToByteArray(File file) {
+        FileInputStream fis = null;
+        byte[] bArray = new byte[(int) file.length()];
+        try {
+            fis = new FileInputStream(file);
+            fis.read(bArray);
+            fis.close();
+        } catch (IOException ioExp) {
+            ioExp.printStackTrace();
+        }
+        return bArray;
+    }
 }

@@ -18,7 +18,16 @@ public class PathValidator {
     }
 
     public static boolean CdupValidator(String cwd){
-        String[] cwd_splitted = cwd.split(File.separator);
+        String[] cwd_splitted;
+        String[] os = System.getProperty("os.name").split(" ");
+
+        if (os[0].equals("Windows")){
+            String separator = File.separator + File.separator;
+            cwd_splitted = cwd.split(separator);
+        }
+        else {
+            cwd_splitted = cwd.split(File.separator);
+        }
         return cwd_splitted.length > 1;
     }
 

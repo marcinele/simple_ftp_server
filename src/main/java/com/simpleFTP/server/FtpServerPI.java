@@ -37,6 +37,7 @@ public class FtpServerPI extends Thread {
     private String stru;                // F - File, R - Record, P - Page
     private String mode;                // S - Stream, B - Block, C - Compressed
     private FtpServerDTP ftpServerDTP;
+    private File renamedOldFile = null;
     HashMap<Integer, String> replyCodes;
 
     public FtpServerPI(Socket socket) throws IOException {
@@ -66,8 +67,8 @@ public class FtpServerPI extends Thread {
 
         cwd_prefix = System.getProperty("user.dir");
         cwd = File.separator + "ftp";
-        System.out.println(cwd_prefix+cwd);
-        cwd_path = Paths.get(cwd_prefix+cwd);
+        System.out.println(cwd_prefix + cwd);
+        cwd_path = Paths.get(cwd_prefix + cwd);
         if (!Files.exists(cwd_path)) {
             Files.createDirectories(cwd_path);
         }
@@ -88,7 +89,6 @@ public class FtpServerPI extends Thread {
                 }
                 System.out.println(">>: " + input);
                 String cmd = input.split(" ")[0];
-                String cmd1 = "CDUP";
                 switch (cmd) {
                     case "USER" -> login(input);
                     case "PASSWORD" -> Response(503);
@@ -106,8 +106,9 @@ public class FtpServerPI extends Thread {
                     case "PASV" -> pasv();
                     case "STOR" -> stor(input);
                     case "MKD" -> mkd(input);
-                    case "DELE" -> dele(input);
-                    case "RMD" -> dele(input);
+                    case "DELE", "RMD" -> dele(input);
+                    case "RNFR" -> rnfr(input);
+                    case "RNTO" -> rnto(input);
                     default -> Response(500);
                 }
             }
@@ -170,9 +171,9 @@ public class FtpServerPI extends Thread {
         String[] args = input.split(" ");
         if (args.length != 2) {
             Response(501);
-        } else if(PathValidator.CwdValidator(args[1], cwd) != null){
+        } else if (PathValidator.CwdValidator(args[1], cwd) != null) {
             String candidate = PathValidator.CwdValidator(args[1], cwd);
-            if (new File(cwd_prefix + candidate).exists()){
+            if (new File(cwd_prefix + candidate).exists()) {
                 cwd = PathValidator.CwdValidator(args[1], cwd);
                 Response(250);
             } else {
@@ -244,10 +245,10 @@ public class FtpServerPI extends Thread {
         // change to parent directory
         if (cwd == null || cwd.length() == 0)
             Response(550);
-        else if(PathValidator.CdupValidator(cwd)){
+        else if (PathValidator.CdupValidator(cwd)) {
             cwd = cwd.substring(0, cwd.lastIndexOf(File.separator));
             Response(250);
-        } else{
+        } else {
             Response(550);
         }
     }
@@ -362,7 +363,7 @@ public class FtpServerPI extends Thread {
 
     private void stor(String input) throws IOException {
         String path = input.split(" ")[1];
-        if( (path= PathValidator.GeneralValidator(path, cwd_prefix, cwd)) != null ){
+        if ((path = PathValidator.GeneralValidator(path, cwd_prefix, cwd)) != null) {
             if (ftpServerDTP != null) {
                 Response(125);
                 Response(ftpServerDTP.stor(path));
@@ -383,48 +384,89 @@ public class FtpServerPI extends Thread {
         }
     }
 
-    private void retr(String input) {
-        // Transfer a copy of the file, specified in the pathname
-        String[] args = input.split(" ");
-        if (args.length < 2)
-            Response(501);
-        else {
-            // To do
+    private void retr(String input) throws IOException, InterruptedException {
+        String path = input.split(" ")[1];
+        if ((path = PathValidator.GeneralValidator(path, cwd_prefix, cwd)) != null) {
+            if (ftpServerDTP != null) {
+                Response(125);
+                Response(ftpServerDTP.retr(path));
+            } else {
+                Response(421);
             }
         }
+    }
 
-    private void mkd(String input){
+    private void mkd(String input) {
         String path = null;
-        try{
+        try {
             path = input.split(" ")[1];
-        }catch(Exception e){
+        } catch (Exception e) {
             Response(501);
             return;
         }
-        if( (path = PathValidator.GeneralValidator(path, cwd_prefix, cwd)) != null ){
+        if ((path = PathValidator.GeneralValidator(path, cwd_prefix, cwd)) != null) {
             File newDir = new File(path);
             try {
                 newDir.mkdir();
                 Response(250); // sprawdzic czy na pewno ten kod
-            } catch (Exception e){
+            } catch (Exception e) {
                 Response(451);
             }
         }
     }
 
-    private void dele(String input){
+    private void dele(String input) {
         String[] input_splitted = input.split(" ");
-        if(input_splitted.length != 2 ){
+        if (input_splitted.length != 2) {
             Response(501);
         } else {
             String path = PathValidator.GeneralValidator(input_splitted[1], cwd_prefix, cwd);
-            if(path != null){
+            if (path != null) {
                 File toDelete = new File(path);
-                if(toDelete.delete()){
+                if (toDelete.delete()) {
                     Response(250);
                 } else {
                     Response(550);
                 }
+            }
+        }
+    }
+    private void rnfr(String input) throws IOException {
+        String[] input_splitted = input.split(" ");
+        if (input_splitted.length != 2)
+            Response(501);
+        else {
+            String fileName = input_splitted[1];
+            String path = cwd_prefix + File.separator + cwd + File.separator + fileName;
+            renamedOldFile = new File(path);
+            Response(250);
+        }
+    }
+
+    private void rnto(String input) throws IOException {
+        String[] input_splitted = input.split(" ");
+        if (input_splitted.length != 2)
+            Response(501);
+        else {
+            String fileName = input_splitted[1];
+            String path;
+            if (fileName.indexOf('.') != -1)
+                if (!fileName.startsWith(cwd))
+                    path = cwd_prefix + File.separator + cwd + File.separator + fileName;
+                else
+                    path = cwd_prefix + File.separator + fileName;
+            else
+                path = cwd_prefix + File.separator + fileName;
+            File renamedNewFile = new File(path);
+            if (renamedOldFile == null) {
+                Response(501);
+            } else {
+                boolean success = renamedOldFile.renameTo(renamedNewFile);
+                if (success) {
+                    renamedOldFile = null;
+                    Response(250);
+                } else
+                    Response(550);
             }
         }
     }
