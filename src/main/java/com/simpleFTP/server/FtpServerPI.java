@@ -411,10 +411,11 @@ public class FtpServerPI extends Thread {
 
     private void mkd(String input) {
         String path = null;
-        if(input.split(" ").length != 2){
+        String[] splitted = input.split(" ");
+        if(splitted.length != 2){
             Response(501);
-        }else {
-            if ((path = PathValidator.GeneralValidator(path, cwd_prefix, cwd)) != null) {
+        } else {
+            if ((path = PathValidator.GeneralValidator(splitted[1], cwd_prefix, cwd)) != null) {
                 File newDir = new File(path);
                 try {
                     newDir.mkdir();
@@ -422,7 +423,7 @@ public class FtpServerPI extends Thread {
                 } catch (Exception e) {
                     Response(451);
                 }
-            }
+            } else Response(501);
         }
     }
 
