@@ -1,7 +1,7 @@
 package com.simpleFTP;
 
 import com.simpleFTP.client.ClientPI;
-import com.simpleFTP.server.Server;
+import com.simpleFTP.server.ConnectionRequestHandler;
 
 public class Main {
 
@@ -9,8 +9,8 @@ public class Main {
 
         if(args[0].equals("server"))
         {
-            Server server = new Server(10101);
-            server.startServer();
+            ConnectionRequestHandler connectionRequestHandler = new ConnectionRequestHandler(10101);
+            connectionRequestHandler.startServer();
         }
         else if(args[0].equals("client")){
             ClientPI clientPI = new ClientPI("localhost", 10101);

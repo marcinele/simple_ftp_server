@@ -12,6 +12,7 @@ package com.simpleFTP.server;
 
 import com.google.common.io.ByteSink;
 import com.google.common.io.Files;
+import com.simpleFTP.log.LoggerSingleton;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -37,6 +38,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.DosFileAttributes;
 import java.nio.file.attribute.PosixFileAttributes;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 
 
 public class FtpServerDTP extends Thread {
@@ -48,12 +50,13 @@ public class FtpServerDTP extends Thread {
     private PrintStream out;
     private DataOutputStream outToClient;
     private int type;
-
+    private Logger logger;
 
     public FtpServerDTP(ServerSocket serverSocket, int type) {
         this.serverSocket = serverSocket;
         this.type = type;
         this.start();
+        logger = LoggerSingleton.getLogger();
     }
 
     public FtpServerDTP(String host, int port, int type) throws IOException {
@@ -61,6 +64,7 @@ public class FtpServerDTP extends Thread {
         this.socket = new Socket(host, port);
         this.type = type;
         ConfigureStreams();
+        logger = LoggerSingleton.getLogger();
     }
 
     private void ConfigureStreams() {
@@ -213,7 +217,7 @@ public class FtpServerDTP extends Thread {
         System.out.println(Arrays.toString(os));
         String command;
         if(os[0].equals("Windows")){
-            command = "dir " + path;
+            command = "cmd /c dir " + path;
         } else {
             command = "ls -la " + path;
         }
@@ -224,8 +228,9 @@ public class FtpServerDTP extends Thread {
             String line;
             while( (line = reader.readLine()) != null){
                 if(line.startsWith("total")) continue;
-                System.out.println(line);
+                //System.out.println(line);
                 out.print(line + EOL());
+                logger.info("[DTP -> " + socket.getRemoteSocketAddress().toString().replace("/", "") + "] : " + line);
             }
             reader.close();
             socket.close();

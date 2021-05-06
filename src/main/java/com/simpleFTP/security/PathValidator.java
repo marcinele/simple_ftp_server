@@ -41,4 +41,12 @@ public class PathValidator {
             return cwd + File.separator + arg;
         }
     }
+
+    public static String DeleValidator(String arg, String cwd_prefix, String cwd){
+        String path = PathValidator.GeneralValidator(arg, cwd_prefix, cwd);
+        if(path != null && !path.endsWith("ftp")){
+            return path;
+        }
+        return null;
+    }
 }

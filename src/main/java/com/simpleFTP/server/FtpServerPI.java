@@ -8,22 +8,19 @@
 
 package com.simpleFTP.server;
 
+import com.simpleFTP.log.LoggerSingleton;
 import com.simpleFTP.security.PathValidator;
 
 import java.io.*;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.Buffer;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.sql.SQLException;
-import java.sql.SQLOutput;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.logging.Logger;
 
 public class FtpServerPI extends Thread {
     private Socket socket;
@@ -39,6 +36,7 @@ public class FtpServerPI extends Thread {
     private String mode;                // S - Stream, B - Block, C - Compressed
     private FtpServerDTP ftpServerDTP;
     private File renamedOldFile = null;
+    private Logger logger;
     HashMap<Integer, String> replyCodes;
 
     public FtpServerPI(Socket socket) throws IOException {
@@ -74,6 +72,7 @@ public class FtpServerPI extends Thread {
             Files.createDirectories(cwd_path);
         }
         configureStreams();
+        logger = LoggerSingleton.getLogger();
     }
 
     @Override
@@ -89,28 +88,31 @@ public class FtpServerPI extends Thread {
                     break;
                 }
                 String cmd = input.split(" ")[0];
-                switch (cmd) {
-                    case "USER" -> login(input);
-                    case "PASSWORD" -> Response(503);
-                    case "CWD" -> cwd(input);
-                    case "TYPE" -> type(input);
-                    case "PORT" -> port(input);
-                    case "QUIT" -> quit();
-                    case "CDUP" -> cdup();
-                    case "LIST" -> list(input);
-                    case "STRU" -> stru(input);
-                    case "MODE" -> mode(input);
-                    case "PWD" -> pwd();
-                    case "NOOP" -> noop();
-                    case "RETR" -> retr(input);
-                    case "PASV" -> pasv();
-                    case "STOR" -> stor(input);
-                    case "MKD" -> mkd(input);
-                    case "DELE", "RMD" -> dele(input);
-                    case "RNFR" -> rnfr(input);
-                    case "RNTO" -> rnto(input);
-                    default -> Response(500);
-                }
+                if(user.isLoggedIn()){
+                    switch (cmd) {
+                        case "USER" -> login(input);
+                        case "PASSWORD" -> Response(503);
+                        case "CWD" -> cwd(input);
+                        case "TYPE" -> type(input);
+                        case "PORT" -> port(input);
+                        case "QUIT" -> quit();
+                        case "CDUP" -> cdup();
+                        case "LIST" -> list(input);
+                        case "STRU" -> stru(input);
+                        case "MODE" -> mode(input);
+                        case "PWD" -> pwd();
+                        case "NOOP" -> noop();
+                        case "RETR" -> retr(input);
+                        case "PASV" -> pasv();
+                        case "STOR" -> stor(input);
+                        case "MKD" -> mkd(input);
+                        case "DELE", "RMD" -> dele(input);
+                        case "RNFR" -> rnfr(input);
+                        case "RNTO" -> rnto(input);
+                        default -> Response(500);
+                    }
+                }else if(cmd.equals("USER")) login(input);
+                else Response(530);
             }
             in.close();
             out.close();
@@ -313,6 +315,7 @@ public class FtpServerPI extends Thread {
     private void Response(int code) {
         out.print(replyCodes.get(code) + EOL());
         System.out.print("[Server -> " + socket.getRemoteSocketAddress().toString().replace("/", "") + "]: " + replyCodes.get(code) + EOL());
+        logger.info("[Server -> " + socket.getRemoteSocketAddress().toString().replace("/", "") + "]: " + replyCodes.get(code) + EOL());
     }
 
     private void CloseControlConnection() {
@@ -322,7 +325,7 @@ public class FtpServerPI extends Thread {
     private String ReadRequest() throws IOException {
         String req = in.readLine();
         System.out.println("[" + socket.getRemoteSocketAddress().toString().replace("/", "") + " -> Server]: " + req);
-
+        logger.info("[" + socket.getRemoteSocketAddress().toString().replace("/", "") + " -> Server]: " + req);
         return req;
     }
 
@@ -408,19 +411,17 @@ public class FtpServerPI extends Thread {
 
     private void mkd(String input) {
         String path = null;
-        try {
-            path = input.split(" ")[1];
-        } catch (Exception e) {
+        if(input.split(" ").length != 2){
             Response(501);
-            return;
-        }
-        if ((path = PathValidator.GeneralValidator(path, cwd_prefix, cwd)) != null) {
-            File newDir = new File(path);
-            try {
-                newDir.mkdir();
-                Response(250); // sprawdzic czy na pewno ten kod
-            } catch (Exception e) {
-                Response(451);
+        }else {
+            if ((path = PathValidator.GeneralValidator(path, cwd_prefix, cwd)) != null) {
+                File newDir = new File(path);
+                try {
+                    newDir.mkdir();
+                    Response(250); // sprawdzic czy na pewno ten kod
+                } catch (Exception e) {
+                    Response(451);
+                }
             }
         }
     }
@@ -430,7 +431,7 @@ public class FtpServerPI extends Thread {
         if (input_splitted.length != 2) {
             Response(501);
         } else {
-            String path = PathValidator.GeneralValidator(input_splitted[1], cwd_prefix, cwd);
+            String path = PathValidator.DeleValidator(input_splitted[1], cwd_prefix, cwd);
             if (path != null) {
                 File toDelete = new File(path);
                 if (toDelete.delete()) {
@@ -438,6 +439,8 @@ public class FtpServerPI extends Thread {
                 } else {
                     Response(550);
                 }
+            } else {
+                Response(550);
             }
         }
     }
@@ -447,7 +450,7 @@ public class FtpServerPI extends Thread {
             Response(501);
         else {
             String fileName = input_splitted[1];
-            String path = cwd_prefix + File.separator + cwd + File.separator + fileName;
+            String path = PathValidator.GeneralValidator(fileName, cwd_prefix, cwd);
             renamedOldFile = new File(path);
             Response(250);
         }
