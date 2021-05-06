@@ -37,7 +37,7 @@ public class ConnectionRequestHandler extends Thread{
         this.running = true;
         while(running)
         {
-            System.out.println("Listening for a connection on addres: " + serverSocket.getInetAddress().getHostAddress());
+            System.out.println("Listening for a connection on addres: " + serverSocket.getInetAddress().getHostAddress() +":"  + serverSocket.getLocalPort());
             try {
                 Socket socket = this.serverSocket.accept();
                 FtpServerPI ftpServerPI = new FtpServerPI(socket);

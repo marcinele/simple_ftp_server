@@ -7,16 +7,16 @@ public class Main {
 
     public static void main(String[] args) {
 
-        if(args[0].equals("server"))
-        {
-            if(args.length != 3){
+        if(args[0].equals("server")) {
+            if (args.length != 3) {
                 System.out.println("Wrong arguments. Proper args \" server <serv_ip_addr> <port>\"");
-            }
-            try{
-                ConnectionRequestHandler connectionRequestHandler = new ConnectionRequestHandler(args[1], Integer.parseInt(args[2]));
-                connectionRequestHandler.startServer();
-            } catch (Exception e){
-                System.out.println("Wrong arguments or internal error");
+            } else {
+                try {
+                    ConnectionRequestHandler connectionRequestHandler = new ConnectionRequestHandler(args[1], Integer.parseInt(args[2]));
+                    connectionRequestHandler.startServer();
+                } catch (Exception e) {
+                    System.out.println("Wrong arguments or internal error");
+                }
             }
         }
         else if(args[0].equals("client")){
