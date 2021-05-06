@@ -83,12 +83,11 @@ public class FtpServerPI extends Thread {
         System.out.println(cwd);
         try {
             while (isRunning) {
-                String input = in.readLine();
+                String input = ReadRequest();
                 if (input == null) {
                     isRunning = false;
                     break;
                 }
-                System.out.println(">>: " + input);
                 String cmd = input.split(" ")[0];
                 switch (cmd) {
                     case "USER" -> login(input);
@@ -98,7 +97,7 @@ public class FtpServerPI extends Thread {
                     case "PORT" -> port(input);
                     case "QUIT" -> quit();
                     case "CDUP" -> cdup();
-                    case "LIST" -> list();
+                    case "LIST" -> list(input);
                     case "STRU" -> stru(input);
                     case "MODE" -> mode(input);
                     case "PWD" -> pwd();
@@ -308,15 +307,12 @@ public class FtpServerPI extends Thread {
 
     private void noop() {
         // sending OK
-        if (ftpServerDTP != null)
-            Response(200);
-        else
-            Response(421);
+        Response(200);
     }
 
     private void Response(int code) {
         out.print(replyCodes.get(code) + EOL());
-        System.out.print("<<: " + replyCodes.get(code) + EOL());
+        System.out.print("[Server -> " + socket.getRemoteSocketAddress().toString().replace("/", "") + "]: " + replyCodes.get(code) + EOL());
     }
 
     private void CloseControlConnection() {
@@ -325,7 +321,7 @@ public class FtpServerPI extends Thread {
 
     private String ReadRequest() throws IOException {
         String req = in.readLine();
-        System.out.println(">>: " + req);
+        System.out.println("[" + socket.getRemoteSocketAddress().toString().replace("/", "") + " -> Server]: " + req);
 
         return req;
     }
@@ -374,12 +370,25 @@ public class FtpServerPI extends Thread {
         }
     }
 
-    private void list() throws Exception {
+    private void list(String input) throws Exception {
         // send a list from the server to the passive DTP
         // args -> [<SP> <pathname>] <CRLF>
         if (ftpServerDTP != null) {
-            Response(125);
-            Response(ftpServerDTP.list(cwd_prefix + cwd + File.separator));
+            String[] input_splitted = input.split(" ");
+            if(input_splitted.length == 2){
+                String path = PathValidator.GeneralValidator(input_splitted[1], cwd_prefix, cwd);
+                if(path != null) {
+                    Response(125);
+                    Response(ftpServerDTP.list_ver2(path));
+                } else {
+                    Response(501);
+                }
+            } else if(input_splitted.length == 1){
+                Response(125);
+                Response(ftpServerDTP.list_ver2(cwd_prefix + cwd + File.separator));
+            } else {
+                Response(501);
+            }
         } else {
             Response(421);
         }

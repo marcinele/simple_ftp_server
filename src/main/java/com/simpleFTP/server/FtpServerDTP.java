@@ -208,6 +208,34 @@ public class FtpServerDTP extends Thread {
         return 200;
     }
 
+    public int list_ver2(String path){
+        String[] os = System.getProperty("os.name").split(" ");
+        System.out.println(Arrays.toString(os));
+        String command;
+        if(os[0].equals("Windows")){
+            command = "dir " + path;
+        } else {
+            command = "ls -la " + path;
+        }
+        try {
+            Process process = Runtime.getRuntime().exec(command);
+            BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(process.getInputStream()));
+            String line;
+            while( (line = reader.readLine()) != null){
+                if(line.startsWith("total")) continue;
+                System.out.println(line);
+                out.print(line + EOL());
+            }
+            reader.close();
+            socket.close();
+            return 200;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return 421;
+        }
+    }
+
     public int retr(String path) {
         try {
             File file = new File(path);

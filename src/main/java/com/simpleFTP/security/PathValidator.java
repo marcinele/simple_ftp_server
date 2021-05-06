@@ -8,7 +8,7 @@ public class PathValidator {
     public static String GeneralValidator(String arg, String cwd_prefix, String cwd){
         if(arg.startsWith(File.separator + "ftp")){
             return cwd_prefix + File.separator + arg;
-        } else if(arg.startsWith(File.separator)){
+        } else if(arg.startsWith(File.separator) || arg.startsWith("-")){
             return null;
         } else if(arg.startsWith("." + File.separator)){
             return cwd_prefix + File.separator + cwd + File.separator + arg.replaceFirst("."+File.separator, "");
@@ -20,7 +20,6 @@ public class PathValidator {
     public static boolean CdupValidator(String cwd){
         String[] cwd_splitted;
         String[] os = System.getProperty("os.name").split(" ");
-
         if (os[0].equals("Windows")){
             String separator = File.separator + File.separator;
             cwd_splitted = cwd.split(separator);
@@ -28,7 +27,7 @@ public class PathValidator {
         else {
             cwd_splitted = cwd.split(File.separator);
         }
-        return cwd_splitted.length > 1;
+        return cwd_splitted.length > 2;
     }
 
     public static String CwdValidator(String arg, String cwd){
