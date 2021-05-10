@@ -170,7 +170,7 @@ public class FtpServerPI extends Thread {
         }
     }
 
-    public void cwd(String input) {              // Change working directory /// Nie sprawdza czy ten folder w ogóle istnieje xD
+    public void cwd(String input) {              // Change working directory
         String[] args = input.split(" ");
         if (args.length != 2) {
             Response(501);
