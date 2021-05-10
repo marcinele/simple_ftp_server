@@ -7,6 +7,8 @@ import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
 
+// Left for future use in password encryption
+
 public class PasswordEncoder {
     private SecureRandom secureRandom;
     private SecretKeyFactory secretKeyFactory;

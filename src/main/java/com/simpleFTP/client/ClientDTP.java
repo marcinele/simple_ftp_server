@@ -7,6 +7,8 @@
 // If two servers are transferring data between them, the user-DTP is inactive.
 
 package com.simpleFTP.client;
+// Used for debugging
+// Left for future development
 
 import java.io.BufferedReader;
 import java.io.IOException;

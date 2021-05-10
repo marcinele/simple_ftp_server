@@ -8,6 +8,10 @@
 
 package com.simpleFTP.client;
 
+// Used for debugging
+// Left for future development
+
+
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
