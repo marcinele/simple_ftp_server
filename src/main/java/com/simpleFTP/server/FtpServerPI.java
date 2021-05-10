@@ -9,6 +9,7 @@
 package com.simpleFTP.server;
 
 import com.simpleFTP.log.LoggerSingleton;
+import com.simpleFTP.security.AuthorizationHandler;
 import com.simpleFTP.security.PathValidator;
 
 import java.io.*;

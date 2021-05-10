@@ -1,6 +1,7 @@
-package com.simpleFTP.server;
+package com.simpleFTP.security;
 
-import com.simpleFTP.db.DatabaseConnector;
+
+import com.simpleFTP.server.User;
 
 import java.io.File;
 import java.io.FileNotFoundException;
